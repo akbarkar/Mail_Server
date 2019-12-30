@@ -61,10 +61,10 @@ void handle_client(int fd) {
     } else if(Strequ(data_cpy, "PASS")){
       char * s3;
       char * s4;
-      s3 = strtok(data, " "); // "PASS"
-      s4 = strtok(NULL, " "); // "password123"
+      s3 = strtok(data, " ");
+      s4 = strtok(NULL, " ");
 
-      strcpy(pass, s4); // "password123"
+      strcpy(pass, s4); // store pasword
 
       memset(&data[0], 0, sizeof(data));
 
@@ -90,10 +90,6 @@ void handle_client(int fd) {
 
   send_string(fd, "Now in transaction state\r\n");
 
-
-
-
-
   if(is_valid_user(user, pass) == 1){
 
     // in transaction state
@@ -110,20 +106,20 @@ void handle_client(int fd) {
       strcpy(data_cpy, data);
       data_cpy[4] = '\0';
 
-      if(Strequ(data_cpy, "STAT")){ //STAT
+      if(Strequ(data_cpy, "STAT")){
 
         unsigned int user_mail_count = get_mail_count(user_mail_list);
         size_t user_mail_size = get_mail_list_size(user_mail_list);
 
         send_string(fd, "+OK %d %zu\r\n.\r\n", user_mail_count, user_mail_size);
 
-      } else if(Strequ(data_cpy, "LIST")){ //LIST
+      } else if(Strequ(data_cpy, "LIST")){
 
         unsigned int count = get_mail_count(user_mail_list);
 
         char pos = data[5];
 
-        if(pos == '\0'){ //if user writes "LIST" without specifying a message number
+        if(pos == '\0'){ // if user writes "LIST" without specifying a message number
 
         send_string(fd, "+OK %u messages\r\n", count);
 
@@ -132,11 +128,11 @@ void handle_client(int fd) {
           mail_item_t item = get_mail_item(user_mail_list, i);
           size_t message_size = get_mail_item_size(item);
 
-          if(item != NULL){ //get_mail_item returns NULL if item is deleted
+          if(item != NULL){ // get_mail_item returns NULL if item is deleted
             if(count - i > 1){
               send_string(fd, "%d %zu\r\n", i + 1, message_size);
             }
-            else if(count - i == 1){ //when listing the last email, end list by printing "."
+            else if(count - i == 1){ // when listing the last email, end list by printing "."
             send_string(fd, "%d %zu\r\n.\r\n", i + 1, message_size);
           }
         } else if(item == NULL){
@@ -144,7 +140,7 @@ void handle_client(int fd) {
         }
       }
     }
-    else if(pos > 0) { //if the user writes "LIST x" for a specific message number
+    else if(pos > 0) { // if the user writes "LIST x" for a specific message number
 
     if(atoi((char *)&pos) - 1 < count){
 
@@ -158,18 +154,18 @@ void handle_client(int fd) {
       send_string(fd, "-ERR invalid message number\r\n");
     }
   }
-      } else if(Strequ(data_cpy, "RETR")){ //RETR
+      } else if(Strequ(data_cpy, "RETR")){
 
-        if(data[5] != '\0'){ //cannot have RETR without message number
+        if(data[5] != '\0'){ // check if RETR has message number
 
-          char pos = data[5]; //char message pos
-          mail_item_t message = get_mail_item(user_mail_list, atoi((char*) &pos) - 1); //!!!!
+          char pos = data[5]; // char message position
+          mail_item_t message = get_mail_item(user_mail_list, atoi((char*) &pos) - 1);
 
-          if(message != NULL){// cannot retreive deleted message
-            //retreive message and print contents
+          if(message != NULL){
+            // retreive message and print contents
 
-            size_t message_size = get_mail_item_size(message); //message size
-            const char * filename = get_mail_item_filename(message); //file pointer
+            size_t message_size = get_mail_item_size(message);
+            const char * filename = get_mail_item_filename(message); // file pointer
 
             FILE *file;
             size_t read_size;
@@ -191,14 +187,14 @@ void handle_client(int fd) {
           send_string(fd, "-ERR must provide message number\r\n");
         }
 
-      } else if(Strequ(data_cpy, "DELE")){ //DELETE
+      } else if(Strequ(data_cpy, "DELE")){
 
         char pos[2];
 
         char * s5;
         char * s6;
-        s5 = strtok(data, " "); // "DELETE"
-        s6 = strtok(NULL, " "); // message position
+        s5 = strtok(data, " ");
+        s6 = strtok(NULL, " "); // position of message to delete
 
         strcpy(pos, s6); // message position stored as char
 
@@ -212,7 +208,7 @@ void handle_client(int fd) {
 
           send_string(fd, "-ERR message %s has already been deleted, or does not exist\r\n", pos);
 
-        } else if(item != NULL){ //get_mail_item returns null if item is already marked as deletedd
+        } else if(item != NULL){ // get_mail_item returns null if item is already marked as deleted
 
           mark_mail_item_deleted(item); // mark item as deleted
           send_string(fd, "+OK message %s has been deleted\r\n", pos);
@@ -223,20 +219,20 @@ void handle_client(int fd) {
 
       }
 
-      } else if(Strequ(data_cpy, "RSET")){ //RSET
+      } else if(Strequ(data_cpy, "RSET")){
 
-        reset_mail_list_deleted_flag(user_mail_list); //reset all emails that were marked as deletedd
+        reset_mail_list_deleted_flag(user_mail_list); // reset all emails that were marked as deleted
         send_string(fd, "+OK\r\n");
 
-      } else if(Strequ(data_cpy, "NOOP")){ //NOOP
+      } else if(Strequ(data_cpy, "NOOP")){
 
         send_string(fd, "+OK\r\n");
 
-      } else if(Strequ(data_cpy, "QUIT")){ //QUIT
+      } else if(Strequ(data_cpy, "QUIT")){
 
         // in update state
 
-        destroy_mail_list(user_mail_list); //delete emails marked as deleted
+        destroy_mail_list(user_mail_list); // delete emails marked as deleted
 
         send_string(fd, "+OK BYE\r\n");
 
